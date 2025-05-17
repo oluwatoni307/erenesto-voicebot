@@ -1,0 +1,496 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Voice Chatbot</title>
+    <style>
+      body {
+        font-family: "Open Sans", Avenir, Helvetica, sans-serif;
+        background-color: #121212;
+        color: #e0e0e0;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .container {
+        max-width: 600px;
+        width: 100%;
+        text-align: center;
+      }
+      h1 {
+        color: #ffffff;
+        margin-bottom: 2rem;
+        font-size: 1.5rem;
+        height: 2rem;
+      }
+      button {
+        background-color: #2a2a2a;
+        color: #ffffff;
+        border: none;
+        border-radius: 50px;
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        margin: 1rem 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 220px;
+      }
+      button:hover {
+        background-color: #3a3a3a;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+      button:active {
+        transform: translateY(0);
+      }
+      .status-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 2rem auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #statusGlow {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      .status-label {
+        font-size: 0.9rem;
+        color: #aaaaaa;
+        margin-top: 1rem;
+      }
+      #audioControls {
+        margin-top: 1rem;
+        width: 100%;
+        display: none;
+      }
+      audio {
+        width: 100%;
+        margin-top: 1rem;
+        background-color: #2a2a2a;
+        border-radius: 8px;
+      }
+      .audio-visible {
+        display: block;
+      }
+      
+      /* Dropdown styles */
+      select {
+        background-color: #2a2a2a;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+        margin: 1rem 0;
+        cursor: pointer;
+        width: 100%;
+        max-width: 220px;
+      }
+      
+      select:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px #3a3a3a;
+      }
+      
+      .dropdown-container {
+        margin-bottom: 1rem;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .dropdown-label {
+        font-size: 0.9rem;
+        color: #aaaaaa;
+        margin-bottom: 0.5rem;
+        text-align: left;
+        width: 100%;
+        max-width: 220px;
+      }
+      
+/* Responsive layout for button group */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.2rem;
+  }
+
+  button {
+    font-size: 0.9rem;
+    padding: 0.8rem 1rem;
+    max-width: 100%;
+  }
+
+  .status-container {
+    width: 80vw;
+    max-width: 180px;
+  }
+  
+  select {
+    font-size: 0.9rem;
+    padding: 0.8rem 1rem;
+  }
+}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="statusText">Voice Assistant</h1>
+
+      <div class="status-container">
+        <img
+          id="statusGlow"
+          src="https://cdn.glitch.global/bfc0594e-2eac-4539-bc24-c0ecf55bfae2/QWfb.gif?v=1743735698799"
+          alt="Active Glow"
+        />
+      </div>
+      
+      <div class="dropdown-container">
+        <div class="dropdown-label">Select Voice:</div>
+        <select id="voiceSelector">
+          <option value="alloy">Alloy</option>
+          <option value="ash">Ash</option>
+          <option value="ballad">Ballad</option>
+          <option value="coral">Coral</option>
+          <option value="echo">Echo</option>
+          <option value="sage">Sage</option>
+          <option value="shimmer">Shimmer</option>
+          <option value="verse">Verse</option>
+        </select>
+      </div>
+      
+      
+      <div class="button-group">
+        <button id="StartButton">Start Conversation</button>
+        <button id="PauseButton">Pause/Restart Conversation</button>
+        <button id="StopButton">End Conversation</button>
+      </div>
+
+      <div id="audioControls">
+        <div class="status-label">AI Response:</div>
+        <audio id="audioPlayback" controls></audio>
+      </div>
+    </div>
+
+    <script>
+      // Configuration
+      const config = {
+        apiUrl: "https://ernesto-sessionkey-2.onrender.com", // Replace with your actual API endpoint
+      };
+
+      // Elements
+      const audioEl = document.getElementById("audioPlayback");
+      const audioControls = document.getElementById("audioControls");
+      const StartButton = document.getElementById("StartButton");
+      const StopButton = document.getElementById("StopButton");
+      const pauseButton = document.getElementById("PauseButton");
+      const modeSelector = document.getElementById("modeSelector");
+
+      const statusGlow = document.getElementById("statusGlow");
+      const statusText = document.getElementById("statusText");
+
+      // Variables
+      let pc = null;
+      let dc = null;
+      let localStream = null;
+      let isActive = false;
+      let spoken = false;
+
+      // Initialize application
+      function init() {
+        pingWakeup(); // Keep the backend awake
+
+        StartButton.addEventListener("click", startConversation);
+        StopButton.addEventListener("click", stopConversation);
+        pauseButton.addEventListener("click", () => {
+          if (!localStream) return;
+
+          if (!isPaused) {
+            localStream.getTracks().forEach((track) => (track.enabled = false)); // Pause mic
+            audioEl.pause(); // Pause audio
+            pauseButton.innerText = "Resume";
+          } else {
+            localStream.getTracks().forEach((track) => (track.enabled = true)); // Resume mic
+            audioEl.play(); // Resume audio
+            pauseButton.innerText = "Pause";
+          }
+          isPaused = !isPaused;
+        });
+
+        // Audio event listeners
+        audioEl.addEventListener("play", () => {
+          spoken = true;
+          updateStatus("Listening");
+        });
+
+        audioEl.addEventListener("pause", () => {
+          if (isActive) {
+            if (spoken) {
+              updateStatus("Pause");
+            } else {
+              updateStatus("Listening");
+            }
+          }
+        });
+
+        audioEl.addEventListener("ended", () => {
+          if (isActive) {
+            updateStatus("You May Interrupt");
+          }
+        });
+      }
+
+      // Fetch Session Key
+      async function getSessionKey(selectedMode) {
+        try {
+          updateStatus("Establishing secure connection...");
+          const response = await fetch(`${config.apiUrl}/session`, {
+            method: "POST", // Changed to POST to send the selected mode
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ voice: selectedMode }) // Send the selected mode to the server
+          });
+
+          if (!response.ok) throw new Error("Failed to get session key");
+
+          const data = await response.json();
+          console.log("Session key received for mode:", selectedMode);
+          return data;
+        } catch (error) {
+          console.error("Error fetching session key:", error);
+          updateStatus("Connection failed. Please try again.");
+          return null;
+        }
+      }
+
+      // Initialize WebRTC
+      async function initWebRTC(ephemeralKey, selectedMode) {
+        try {
+          updateStatus("Starting Voice Chat");
+
+          pc = new RTCPeerConnection();
+
+          // Handle incoming audio stream
+          pc.ontrack = (e) => {
+            audioEl.srcObject = e.streams[0];
+            audioEl.play().catch((error) => {
+              console.error("Error playing audio:", error);
+            });
+            audioControls.classList.add("audio-visible");
+          };
+
+          // Request microphone access
+          localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+
+          // Add local audio track to connection
+          pc.addTrack(localStream.getTracks()[0], localStream);
+
+          // Create data channel for events
+          dc = pc.createDataChannel("oai-events");
+
+          // Handle OpenAI data channel events
+          dc.addEventListener("message", (e) => {
+            const event = JSON.parse(e.data);
+            console.log("Event:", event);
+
+            if (event.type === "response.audio.delta") {
+              updateStatus("AI Speaking");
+              updateVisualState("ai-speaking");
+            } else if (event.type === "input_audio_buffer.speech_started") {
+              updateStatus("You're Speaking");
+              updateVisualState("user-speaking");
+            } else if (event.type === "input_audio_buffer.speech_stopped") {
+              if (spoken) {
+                updateStatus("Listening");
+              } else {
+                updateStatus("You May Interrupt");
+              }
+            } else if (event.type === "session.updated") {
+              console.log("Session configured:", event.session);
+            }
+          });
+
+          // Configure session when data channel opens
+          dc.onopen = () => {
+            // Customize instructions based on selected mode
+            let instructions = "Respond concisely and naturally in conversation";
+            
+            
+            dc.send(
+              JSON.stringify({
+                type: "session.update",
+                session: {
+                  instructions: instructions,
+                },
+              })
+            );
+            updateStatus("Listening");
+          };
+
+          // Monitor connection state
+          pc.onconnectionstatechange = () => {
+            console.log("Connection state:", pc.connectionState);
+
+            if (pc.connectionState === "connected") {
+              updateStatus("Connected");
+            } else if (
+              pc.connectionState === "disconnected" ||
+              pc.connectionState === "failed" ||
+              pc.connectionState === "closed"
+            ) {
+              updateStatus("Connection lost. Please restart.");
+              stopConversation();
+            }
+          };
+
+          // Create and send offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+
+          const baseUrl = "https://api.openai.com/v1/realtime";
+          const model = "gpt-4o-realtime-preview-2024-12-17";
+
+          const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+            method: "POST",
+            body: offer.sdp,
+            headers: {
+              Authorization: `Bearer ${ephemeralKey}`,
+              "Content-Type": "application/sdp",
+            },
+          });
+
+          if (!sdpResponse.ok) {
+            throw new Error(`API responded with status: ${sdpResponse.status}`);
+          }
+
+          const answer = { type: "answer", sdp: await sdpResponse.text() };
+          await pc.setRemoteDescription(answer);
+
+          console.log("Real-time connection established!");
+        } catch (error) {
+          console.error("Error initializing WebRTC:", error);
+          updateStatus("Connection failed. Please try again.");
+          stopConversation();
+        }
+      }
+      let isPaused = false;
+
+      // UI Update Functions
+      function updateStatus(text) {
+        statusText.textContent = text;
+      }
+      function updateVisualState(state) {
+        // Reference to the statusGlow element (assumed to be an <img> or <div> with a GIF)
+
+        // Show the status glow with full opacity
+        statusGlow.style.opacity = "1";
+
+        // Apply visual effects based on state
+        switch (state) {
+          case "inactive":
+            statusGlow.style.opacity = "0";
+            statusGlow.style.filter = "none"; // Reset filter
+            break;
+        }
+      }
+
+      async function pingWakeup() {
+        try {
+          const response = await fetch(`${config.apiUrl}/wakeup`); // Replace with actual server URL
+          const data = await response.json();
+          if (response.ok) {
+            console.log("Wakeup status:", data.status); // Should log "ok"
+          } else {
+            console.error("Wakeup failed with status:", response.status);
+          }
+        } catch (error) {
+          console.error("Error pinging wakeup endpoint:", error);
+        }
+      }
+
+      // Start conversation function
+      async function startConversation() {
+        isActive = true;
+        StartButton.hidden = true;
+        updateStatus("Connecting...");
+        updateVisualState("You May Interrupt");
+
+        // Get the selected mode from the dropdown
+        const selectedMode = voiceSelector.value;
+        console.log("Selected mode:", selectedMode);
+        
+        // Pass the selected mode to getSessionKey
+        const ephemeralKey = await getSessionKey(selectedMode);
+        if (ephemeralKey) {
+          await initWebRTC(ephemeralKey, selectedMode);
+        } else {
+          stopConversation();
+        }
+      }
+
+      // Stop conversation function
+      function stopConversation() {
+        isActive = false;
+
+        // Close peer connection if it exists
+        if (pc) {
+          pc.close();
+          pc = null;
+          dc = null;
+        }
+
+        // Stop audio playback
+        if (audioEl.srcObject) {
+          audioEl.pause();
+          audioEl.srcObject = null;
+        }
+
+        // Clean up audio controls
+        audioControls.classList.remove("audio-visible");
+
+        // Clean up media stream
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+          localStream = null;
+        }
+
+        // Update UI
+        StartButton.hidden = false;
+        updateStatus("Voice Assistant");
+        updateVisualState("inactive");
+      }
+
+      // Initialize the application when the page loads
+      document.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
